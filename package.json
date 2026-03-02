@@ -1,0 +1,15 @@
+{
+  "name": "flova-video",
+  "version": "1.0.0",
+  "description": "> Claude Code 插件：使用隔离浏览器在 flova.ai 上自动创建 AI 视频。",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

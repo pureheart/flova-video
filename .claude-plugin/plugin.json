@@ -1,0 +1,8 @@
+{
+  "name": "flova-video",
+  "description": "Automate AI video creation on flova.ai using an isolated browser with Playwright",
+  "version": "1.0.0",
+  "author": {
+    "name": "zhangyi"
+  }
+}
