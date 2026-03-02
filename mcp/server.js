@@ -10,6 +10,16 @@
  *   - open_browser : Simply open flova.ai in an isolated browser
  */
 
+const path = require('path');
+const fs   = require('fs');
+
+// Auto-install dependencies if missing
+const ROOT = path.resolve(__dirname, '..');
+if (!fs.existsSync(path.join(ROOT, 'node_modules', '@modelcontextprotocol', 'sdk'))) {
+  process.stderr.write('[flova-video MCP] Dependencies missing. Running setup...\n');
+  require('child_process').execSync('node scripts/setup.js', { cwd: ROOT, stdio: 'inherit' });
+}
+
 const { Server }               = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const {
@@ -17,7 +27,6 @@ const {
   ListToolsRequestSchema,
 }                              = require('@modelcontextprotocol/sdk/types.js');
 const { spawn }                = require('child_process');
-const path                    = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
 

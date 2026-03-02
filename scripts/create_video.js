@@ -14,10 +14,18 @@
  *   --headless  Run in headless mode (default: false, shows browser)
  */
 
-const { chromium } = require('@playwright/test');
 const path = require('path');
-const os = require('os');
-const fs = require('fs');
+const os   = require('os');
+const fs   = require('fs');
+
+// Auto-install dependencies if missing
+const ROOT = path.resolve(__dirname, '..');
+if (!fs.existsSync(path.join(ROOT, 'node_modules', '@playwright', 'test'))) {
+  console.log('[flova-video] Dependencies missing. Running setup...');
+  require('child_process').execSync('node scripts/setup.js', { cwd: ROOT, stdio: 'inherit' });
+}
+
+const { chromium } = require('@playwright/test');
 
 // Locate the real system Chrome (avoids Google bot detection)
 const CHROME_PATHS = {

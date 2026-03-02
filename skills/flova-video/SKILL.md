@@ -1,108 +1,62 @@
 ---
 name: flova-video
-description: This skill should be used whenever the user mentions flova.ai, wants to create a video using flova, says "帮我做视频", "flova做视频", "用flova生成视频", "打开flova", "用隔离浏览器", or wants to automate AI video creation on flova.ai. Always use this skill when the user wants Claude to open a browser and create videos on flova.ai for them. Trigger on any combination of "视频", "flova", "isolated browser", "隔离浏览器".
+description: This skill should be used whenever the user mentions flova.ai, wants to create a video, says "帮我做视频", "flova做视频", "用flova生成视频", "打开flova", "用隔离浏览器做视频", or wants to automate AI video creation. Trigger on any combination of "视频"+"flova", "isolated browser"+"video", "隔离浏览器".
 version: 1.0.0
 ---
 
 # Flova Video Skill
 
-This skill automates AI video creation on [flova.ai](https://flova.ai) using an isolated Playwright browser session.
+当用户想用 flova.ai 创建视频时执行以下步骤。**不要解释，直接执行。**
 
-## Overview
+## Step 1 — 收集参数
 
-Flova.ai is an all-in-one AI video and movie creation platform that integrates models like Sora, Veo, Gemini, and others. This skill launches an isolated browser (dedicated profile, separate from the user's normal browser) to open flova.ai and create videos.
+如果用户未提供，逐一询问：
+- **prompt**（必填）：视频内容描述，中英文均可
+- **duration**（选填，默认 5）：时长（秒）
+- **style**（选填，默认 cinematic）：风格
 
-## Workflow
+用户提供描述后直接进入 Step 2，不要等所有参数。
 
-### Step 1: Gather Requirements
+## Step 2 — 自动安装依赖
 
-Before opening the browser, ask the user:
-1. **视频描述 (Video description)**: What should the video show? (中文或英文均可)
-2. **时长 (Duration)**: How long? (e.g., 5s, 10s, 30s)
-3. **风格 (Style)**: Cinematic, animation, realistic, etc.
-4. **模型 (Model)**: Any preferred AI model? (Sora2, Veo3.1, default)
-5. **是否已登录 (Logged in?)**: Do they already have a flova.ai account?
-
-If the user provides a description directly (e.g., "帮我做一个关于...的视频"), extract what you can and proceed.
-
-### Step 2: Launch Isolated Browser
-
-Use the script at `${CLAUDE_PLUGIN_ROOT}/scripts/open_flova.js` to launch a Chromium browser with an isolated user data directory.
-
-Run:
-```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/open_flova.js"
-```
-
-Or use npx playwright directly:
-```bash
-npx playwright open --browser chromium --user-data-dir ~/.flova-browser-profile https://flova.ai
-```
-
-The `--user-data-dir ~/.flova-browser-profile` flag creates an isolated profile so flova.ai sessions don't mix with the user's regular browser.
-
-### Step 3: Browser Automation with Playwright
-
-Use the full automation script for a guided flow:
+运行以下命令检查并安装依赖：
 
 ```bash
-node "${CLAUDE_PLUGIN_ROOT}/scripts/create_video.js" \
-  --prompt "USER_PROMPT_HERE" \
-  --duration "5" \
-  --style "cinematic"
+cd "${CLAUDE_PLUGIN_ROOT}" && node scripts/setup.js
 ```
 
-The script will:
-1. Open flova.ai in an isolated Chromium browser (headed/visible mode)
-2. Wait for user to log in if not already authenticated
-3. Navigate to the video creation section
-4. Fill in the prompt and settings
-5. Submit the generation request
-6. Wait and report back the result
+`setup.js` 会自动判断是否需要安装，不会重复操作。
 
-### Step 4: Handle Login
+## Step 3 — 启动隔离浏览器并创建视频
 
-If the user is not logged in, the browser will open and pause at the login page. Tell the user:
-> "浏览器已打开，请在浏览器窗口中登录您的 flova.ai 账号，完成后告诉我。"
+用收集到的参数运行：
 
-After user confirms login, continue the automation.
-
-### Step 5: Monitor Progress
-
-Flova.ai video generation can take time. Keep the browser open and:
-- Poll for completion status
-- Notify the user when the video is ready
-- Provide the download/share link
-
-## Script Usage
-
-Read `${CLAUDE_PLUGIN_ROOT}/scripts/create_video.js` for the full automation script.
-Read `${CLAUDE_PLUGIN_ROOT}/scripts/open_flova.js` for the simple browser-open script.
-
-## Dependencies
-
-- **Node.js**: Required (check with `node --version`)
-- **Playwright**: Available via `npx playwright` (1.58.2+)
-- **Browser**: Chromium (auto-downloaded by Playwright)
-
-Install Playwright browsers if needed:
 ```bash
-npx playwright install chromium
+cd "${CLAUDE_PLUGIN_ROOT}" && node scripts/create_video.js \
+  --prompt "{{用户的视频描述}}" \
+  --duration {{时长，默认5}} \
+  --style "{{风格，默认cinematic}}"
 ```
 
-## Important Notes
+**注意**：将 `{{...}}` 替换为实际值再执行。
 
-- Always use `--user-data-dir ~/.flova-browser-profile` for isolation
-- Run in headed mode (visible browser) so the user can see and interact
-- If automation fails due to UI changes, fall back to opening the browser and guiding the user verbally
-- The isolated profile persists login state between sessions
-- Never store credentials in scripts; let the user log in manually
+脚本会：
+1. 自动用系统 Chrome 打开隔离浏览器（Google 登录不被拦截）
+2. 导航到 `https://flova.ai/create`
+3. 尝试自动填入 prompt
+4. 遇到需要人工操作时（登录、点击生成）在终端提示用户
 
-## Error Handling
+## Step 4 — 告知用户
 
-| Error | Solution |
-|-------|----------|
-| Browser doesn't open | Run `npx playwright install chromium` first |
-| Login required | Pause and let user log in manually |
-| UI element not found | Fall back to `open_flova.js` (manual mode) |
-| Generation timeout | Check flova.ai status page, notify user |
+脚本启动后告诉用户：
+- 浏览器已打开，使用 `~/.flova-browser-profile` 独立配置，不影响日常浏览器
+- 如果是首次使用，需要在浏览器中手动登录 flova.ai（推荐邮箱密码，不用 Google）
+- 登录后状态会保存，下次无需再登录
+
+## 备用：仅打开浏览器
+
+如果用户只想手动操作，不需要自动填写：
+
+```bash
+cd "${CLAUDE_PLUGIN_ROOT}" && node scripts/open_flova.js
+```
