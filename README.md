@@ -1,140 +1,188 @@
 # flova-video
 
-> Claude Code 插件：使用隔离浏览器在 flova.ai 上自动创建 AI 视频。
+> MCP Server + Claude Code Plugin：用隔离浏览器在 flova.ai 上创建 AI 视频。
+> 支持 Claude Code、Cursor、Cline、Continue.dev、Windsurf 等所有 MCP 兼容 Agent。
 
 ---
 
-## 这个插件是做什么的
+## 这个项目是做什么的
 
-flova-video 是一个 Claude Code 插件。当你对 Claude 说"帮我在 flova 做个视频"时，它会：
+flova-video 把 [flova.ai](https://flova.ai) 的视频创作能力封装成 **MCP（Model Context Protocol）工具**，
+任何支持 MCP 的 AI agent 只需配置一次，之后直接对 agent 说"帮我在 flova 做个视频"即可。
 
-1. 用**系统 Chrome**（非 Playwright 内置 Chromium）打开一个**独立浏览器配置**，避免 Google 登录被拦截
-2. 自动导航到 flova.ai 创作页面
-3. 自动填写视频描述（prompt）并尝试提交
-4. 遇到需要人工操作的步骤（登录、验证码）时暂停并提示
+**[flova.ai](https://flova.ai)** 是集成了 Sora2、Veo3.1、Gemini 等多种 AI 模型的视频/电影创作平台。
 
-[flova.ai](https://flova.ai) 是集成了 Sora2、Veo3.1、Gemini 等多种 AI 模型的视频/电影创作平台。
-
----
-
-## 安装方式
-
-### 方式一：从 GitHub 安装（推荐）
-
-```bash
-claude plugin install https://github.com/rarezhang2020/flova-video
-```
-
-安装完成后重启 Claude Code 即可生效。
-
-### 方式二：本地安装（开发调试用）
-
-```bash
-git clone https://github.com/rarezhang2020/flova-video.git
-claude plugin install ./flova-video
-```
-
-### 方式三：当前 session 临时加载
-
-```bash
-git clone https://github.com/rarezhang2020/flova-video.git
-claude --plugin-dir ./flova-video
-```
+**核心能力：**
+- 用系统 Chrome（非 Playwright 内置 Chromium）打开**独立浏览器配置**，Google 登录不被拦截
+- 自动导航到 flova.ai 创作页面并预填 prompt
+- 遇到需要人工操作（登录、点击生成）时，浏览器保持打开，用户直接在浏览器里完成
 
 ---
 
-## 首次使用前的准备
+## 暴露的 MCP 工具
 
-### 第一步：安装 Node.js 依赖
+| 工具名 | 说明 | 必填参数 |
+|--------|------|----------|
+| `create_video` | 打开 flova.ai 并预填视频描述，用户点击 Generate 即可生成 | `prompt` |
+| `open_browser` | 仅打开 flova.ai 隔离浏览器，不预填内容 | 无 |
+
+### `create_video` 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `prompt` | string | 必填 | 视频描述，中英文均可 |
+| `duration` | number | `5` | 视频时长（秒） |
+| `style` | string | `cinematic` | 风格提示词 |
+
+---
+
+## 安装与配置
+
+### 第一步：克隆仓库并安装依赖
 
 ```bash
+git clone https://github.com/pureheart/flova-video.git
 cd flova-video
 npm install
-```
-
-### 第二步：安装 Playwright Chromium（仅备用，系统 Chrome 优先）
-
-```bash
 npx playwright install chromium
 ```
 
-> **为什么需要系统 Chrome？**
-> Google OAuth 登录会检测 Playwright 内置的 Chromium 并拦截，报"不安全"错误。
-> 插件会优先使用 `/Applications/Google Chrome.app`（macOS）中的真实 Chrome，
-> 完全规避这个问题。
+### 第二步：在你的 Agent 中配置 MCP
+
+根据你使用的 agent，选择对应配置方式：
+
+---
+
+#### Claude Code
+
+编辑 `~/.claude/settings.json`（没有则新建）：
+
+```json
+{
+  "mcpServers": {
+    "flova-video": {
+      "command": "node",
+      "args": ["/absolute/path/to/flova-video/mcp/server.js"]
+    }
+  }
+}
+```
+
+或者使用 Claude Code 内置命令：
+
+```bash
+claude mcp add flova-video node /absolute/path/to/flova-video/mcp/server.js
+```
+
+---
+
+#### Cursor
+
+打开 `Cursor Settings → MCP`，点击 `Add MCP Server`，填入：
+
+```json
+{
+  "flova-video": {
+    "command": "node",
+    "args": ["/absolute/path/to/flova-video/mcp/server.js"]
+  }
+}
+```
+
+或直接编辑 `~/.cursor/mcp.json`：
+
+```json
+{
+  "mcpServers": {
+    "flova-video": {
+      "command": "node",
+      "args": ["/absolute/path/to/flova-video/mcp/server.js"]
+    }
+  }
+}
+```
+
+---
+
+#### Cline（VS Code 插件）
+
+打开 VS Code → Cline 插件设置 → `MCP Servers` → 点击 `Edit MCP Settings`，添加：
+
+```json
+{
+  "flova-video": {
+    "command": "node",
+    "args": ["/absolute/path/to/flova-video/mcp/server.js"],
+    "disabled": false,
+    "autoApprove": ["create_video", "open_browser"]
+  }
+}
+```
+
+---
+
+#### Continue.dev
+
+编辑 `~/.continue/config.json`，在 `mcpServers` 数组中添加：
+
+```json
+{
+  "mcpServers": [
+    {
+      "name": "flova-video",
+      "command": "node",
+      "args": ["/absolute/path/to/flova-video/mcp/server.js"]
+    }
+  ]
+}
+```
+
+---
+
+#### Windsurf
+
+编辑 `~/.codeium/windsurf/mcp_config.json`：
+
+```json
+{
+  "mcpServers": {
+    "flova-video": {
+      "command": "node",
+      "args": ["/absolute/path/to/flova-video/mcp/server.js"]
+    }
+  }
+}
+```
+
+---
+
+#### 通用（任何支持 stdio MCP 的 Agent）
+
+MCP Server 通过标准输入输出（stdio）通信，启动命令：
+
+```bash
+node /absolute/path/to/flova-video/mcp/server.js
+```
 
 ---
 
 ## 使用方式
 
-### 方式一：自然语言触发（推荐）
-
-启动 Claude Code 后直接说，技能自动识别：
+配置完成并重启 agent 后，直接用自然语言：
 
 ```
-帮我用 flova 做一个关于城市夜景的视频
-用 flova.ai 生成一段 30 秒的婚礼场景，迪士尼风格
-打开 flova，做个视频
+帮我在 flova 做一个关于城市夜景的视频，30秒，电影感
 ```
 
-**触发关键词**（含以下任意一个即触发）：
-`flova`、`flova.ai`、`帮我做视频`、`生成视频`、`用隔离浏览器`、`flova做视频`
-
-### 方式二：斜杠命令
-
 ```
-/flova-video:flova 朱迪和尼克的迪士尼风格婚礼，30秒，喜气洋洋
+用 flova.ai 生成一段迪士尼风格的婚礼视频，朱迪和尼克结婚，喜气洋洋
 ```
 
-不带参数时 Claude 会主动询问视频内容：
-
 ```
-/flova-video:flova
+打开 flova 浏览器，我要手动做个视频
 ```
 
----
-
-## 完整工作流程
-
-技能触发后，Claude 按以下步骤自动执行：
-
-```
-1. 收集信息
-   ├── 视频描述（必填）
-   ├── 时长（默认 5 秒）
-   ├── 风格（默认 cinematic）
-   └── 模型偏好（可选）
-
-2. 检查依赖
-   └── node_modules 是否存在，Chromium 是否已下载
-
-3. 启动隔离浏览器
-   ├── 优先使用系统 Chrome（Google 登录不被拦截）
-   ├── 独立配置目录：~/.flova-browser-profile
-   └── 窗口可见模式，用户全程可以看到操作
-
-4. 打开 flova.ai
-   ├── 检测是否已登录
-   └── 未登录时暂停 → 提示用户手动登录 → 继续
-
-5. 导航到视频创作页面
-   ├── 自动尝试 /zh-CN/create、/create 等路径
-   └── 失败时提示用户手动导航
-
-6. 填写 prompt
-   ├── 自动定位输入框并填写
-   └── 失败时显示 prompt 内容，等待用户手动粘贴
-
-7. 提交生成
-   ├── 自动点击 Generate / 生成 按钮
-   └── 失败时提示用户手动点击
-
-8. 等待完成
-   └── 浏览器保持打开，用户实时查看进度，完成后按 ENTER
-
-9. 返回结果
-   └── 报告最终页面地址
-```
+Agent 会自动调用 `create_video` 或 `open_browser` 工具，Chrome 窗口随即弹出。
 
 ---
 
@@ -142,18 +190,20 @@ npx playwright install chromium
 
 ```
 flova-video/
-├── .claude-plugin/
-│   └── plugin.json          # 插件元信息
+├── mcp/
+│   └── server.js            # MCP Server 入口（核心）
+├── scripts/
+│   ├── create_video.js      # 浏览器自动化脚本（支持 --non-interactive）
+│   └── open_flova.js        # 简单打开浏览器
 ├── skills/
 │   └── flova-video/
-│       └── SKILL.md         # 技能定义（自动触发逻辑 + 工作流程指引）
+│       └── SKILL.md         # Claude Code 专属技能定义（自动触发）
 ├── commands/
-│   └── flova.md             # 斜杠命令 /flova-video:flova
-├── scripts/
-│   ├── open_flova.js        # 简单模式：仅打开浏览器
-│   └── create_video.js      # 完整模式：自动化填写 + 提交
-├── package.json             # Node.js 依赖声明
-├── .gitignore
+│   └── flova.md             # Claude Code 斜杠命令 /flova-video:flova
+├── .claude-plugin/
+│   └── plugin.json          # Claude Code 插件元信息
+├── .mcp.json                # MCP 配置声明
+├── package.json
 └── README.md
 ```
 
@@ -161,61 +211,45 @@ flova-video/
 
 ## 关于浏览器隔离
 
-插件使用 `~/.flova-browser-profile` 作为专属浏览器配置目录：
-
-- 与你日常使用的 Chrome/Safari/Firefox **完全隔离**
-- 关闭后**登录状态保留**，下次无需重新登录
+- 使用 `~/.flova-browser-profile` 作为专属配置目录，与日常浏览器完全隔离
+- **优先使用系统 Chrome**，彻底避免 Google OAuth 登录被拦截
+- 登录状态跨 session 持久保存，无需每次重新登录
 - 清除登录状态：`rm -rf ~/.flova-browser-profile`
 
 ---
 
 ## 环境依赖
 
-| 依赖 | 版本要求 | 说明 |
-|------|----------|------|
+| 依赖 | 要求 | 说明 |
+|------|------|------|
 | Node.js | v18+ | `node --version` |
+| Google Chrome | 任意版本 | macOS 自动检测，解决 Google 登录问题 |
+| @modelcontextprotocol/sdk | ^1.0.0 | `npm install` 自动安装 |
 | @playwright/test | ^1.58 | `npm install` 自动安装 |
-| Google Chrome | 任意版本 | macOS 默认路径自动检测 |
 | Chromium（备用） | 自动下载 | `npx playwright install chromium` |
 
 ---
 
 ## 常见问题
 
-**Q：Google 登录提示"不安全"或被拦截**
+**Q：配置后 agent 看不到工具**
 
-A：插件已改为优先使用系统 Chrome，此问题应已解决。如仍有问题，请改用 flova.ai 的**邮箱密码登录**，而非 Google OAuth。
+A：重启 agent（Cursor/VS Code 需要完全退出重开）。用 Claude Code 可以运行 `claude mcp list` 验证。
 
-**Q：`Cannot find module '@playwright/test'`**
+**Q：Google 登录提示不安全**
 
-A：在插件目录运行：
-```bash
-npm install
-```
+A：脚本优先使用系统 Chrome，Google 登录应正常。若仍有问题，改用 flova.ai 邮箱密码登录。
 
-**Q：`Executable doesn't exist` 错误**
+**Q：`Cannot find module '@modelcontextprotocol/sdk'`**
 
-A：Playwright Chromium 未下载：
-```bash
-npx playwright install chromium
-```
+A：运行 `npm install`。
 
-**Q：自动填写 prompt 失败**
+**Q：浏览器自动填写 prompt 失败**
 
-A：flova.ai 的 UI 可能更新了。脚本会打印 prompt 内容并暂停，手动粘贴后按 ENTER 继续。
-
-**Q：想清除登录状态重新登录**
-
-A：
-```bash
-rm -rf ~/.flova-browser-profile
-```
+A：flova.ai 的 UI 可能更新了。agent 返回的提示里会包含完整 prompt，手动粘贴到浏览器即可。
 
 ---
 
-## 版本信息
+## 版本
 
-- 插件版本：1.0.0
-- 适配 Claude Code：最新稳定版
-- Node.js 要求：v18+
-- 作者：rarezhang2020
+- `1.0.0` - 初始版本，MCP Server + Claude Code Plugin 双模式

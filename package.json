@@ -1,15 +1,26 @@
 {
   "name": "flova-video",
   "version": "1.0.0",
-  "description": "> Claude Code 插件：使用隔离浏览器在 flova.ai 上自动创建 AI 视频。",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "description": "Claude Code plugin & MCP Server: create AI videos on flova.ai using an isolated browser",
+  "main": "mcp/server.js",
+  "bin": {
+    "flova-video": "mcp/server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "scripts": {
+    "start": "node mcp/server.js",
+    "mcp": "node mcp/server.js"
+  },
+  "keywords": [
+    "mcp",
+    "flova",
+    "ai-video",
+    "playwright",
+    "claude-code-plugin"
+  ],
+  "author": "pureheart",
+  "license": "MIT",
   "dependencies": {
-    "@playwright/test": "^1.58.2"
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@playwright/test": "^1.58.0"
   }
 }

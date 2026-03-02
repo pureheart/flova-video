@@ -35,11 +35,12 @@ const getArg = (name) => {
   return idx !== -1 ? args[idx + 1] : null;
 };
 
-const PROMPT   = getArg('prompt');
-const DURATION = getArg('duration') || '5';
-const STYLE    = getArg('style') || 'cinematic';
-const HEADLESS = args.includes('--headless');
-const PROFILE_DIR = path.join(os.homedir(), '.flova-browser-profile');
+const PROMPT          = getArg('prompt');
+const DURATION        = getArg('duration') || '5';
+const STYLE           = getArg('style') || 'cinematic';
+const HEADLESS        = args.includes('--headless');
+const NON_INTERACTIVE = args.includes('--non-interactive'); // MCP mode: no stdin prompts
+const PROFILE_DIR     = path.join(os.homedir(), '.flova-browser-profile');
 
 if (!PROMPT) {
   console.error('Error: --prompt is required');
@@ -49,6 +50,11 @@ if (!PROMPT) {
 
 async function waitForUser(message) {
   console.log(`\n[ACTION REQUIRED] ${message}`);
+  if (NON_INTERACTIVE) {
+    // MCP mode: don't block on stdin, browser stays open for user to interact
+    console.log('[Non-interactive mode: skipping ENTER prompt, browser will stay open]');
+    return;
+  }
   console.log('[Press ENTER in this terminal when done...]');
   await new Promise(resolve => {
     process.stdin.resume();
@@ -205,6 +211,13 @@ async function main() {
     }
 
     console.log('\n[flova-video] Generation started! Watch the browser for progress.');
+    if (NON_INTERACTIVE) {
+      // MCP mode: keep browser open, script exits but browser stays (detached)
+      console.log(`\n[flova-video] Browser open at: ${page.url()}`);
+      console.log('[flova-video] MCP mode: exiting script, browser stays open for user.');
+      return;
+    }
+
     await waitForUser(
       '视频生成中，请在浏览器中查看进度。\n完成后按 ENTER 关闭浏览器。\n' +
       '(Video is generating. Press ENTER when done to close the browser.)'
@@ -214,13 +227,17 @@ async function main() {
 
   } catch (err) {
     console.error('[flova-video] Error:', err.message);
-    await waitForUser(
-      '发生错误，请手动完成后按 ENTER 退出。\n' +
-      '(Error occurred. Complete manually, then press ENTER.)'
-    );
+    if (!NON_INTERACTIVE) {
+      await waitForUser(
+        '发生错误，请手动完成后按 ENTER 退出。\n' +
+        '(Error occurred. Complete manually, then press ENTER.)'
+      );
+    }
   } finally {
-    await browser.close();
-    console.log('[flova-video] Browser closed.');
+    if (!NON_INTERACTIVE) {
+      await browser.close();
+      console.log('[flova-video] Browser closed.');
+    }
   }
 }
 

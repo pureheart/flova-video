@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "flova-video": {
+      "command": "node",
+      "args": ["mcp/server.js"],
+      "description": "Create AI videos on flova.ai using an isolated browser"
+    }
+  }
+}
